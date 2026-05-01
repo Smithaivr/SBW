@@ -1,0 +1,83 @@
+You are analysing a screenplay scene for production breakdown.
+
+Return JSON only. No explanation.
+
+Scene ID: {{ scene_id }}
+Location: {{ location_name }}
+Time of day: {{ time_of_day }}
+Location type: {{ location_type }}
+
+Characters: {{ characters }}
+Noisy props hints: {{ props }}
+Vehicles hints: {{ vehicles }}
+Animals hints: {{ animals }}
+
+Action lines:
+{% for line in action_lines %}
+- {{ line }}
+{% endfor %}
+
+Dialogue:
+{% for d in dialogue %}
+{{ d.character }}: {{ d.text }}
+{% endfor %}
+
+Full scene text:
+{{ raw_text }}
+
+Use action_lines and full scene text as the source of truth. Hints are only clues.
+Return JSON:
+{
+  "scene_id": "{{ scene_id }}",
+  "shots": [
+    {
+      "Scene No.": "{{ scene_id }}",
+      "Shot No.": "",
+      "Script Pages": "{{ script_pages }}",
+      "Time of Day": "{{ time_of_day }}",
+      "Location / Environment": "{{ location_name }}",
+      "Interior/Exterior": "{{ location_type }}",
+      "Action / Story Beat": "",
+      "Characters in Shot": "",
+      "Featured Extras / Groups": "",
+      "Props / Set Dressing": "",
+      "Weapons": "",
+      "Animals": "",
+      "Vehicles / Mounts": "",
+      "VFX / SFX / Stunts": "",
+      "Storyboard / Camera Notes": "",
+      "Continuity / Production Notes": "",
+      "Priority": ""
+    }
+  ]
+}
+
+Rules:
+- Noisy props hints may contain wrong items. Do NOT copy them directly.
+- Final props must be physical production objects only.
+- If a prop is not literally present in the action_lines or full scene text, exclude it.
+- Do not add common battle items like sword, shield, spear unless the exact word appears in this scene.
+- Exclude people/groups: sentries, guards, soldiers, man, woman, crowd.
+- Exclude natural elements: sun, sky, light.
+- Exclude sounds: rumble, noise, hooves.
+- Exclude body parts: foot, shoulder, face, eyes.
+- Exclude vague/abstract phrases: form, chance, breath, time, front.
+- Valid props examples: fort gates, arrow, sword, dagger, shield, coins, bag, plate, flowers.
+- characters = real people/roles only.
+- Create one row per clear visual shot or production beat.
+- Each item inside "shots" must match the Excel columns exactly.
+- Create maximum 5 shots per scene.
+- Shot No. must be sequential: 1, 2, 3...
+- Fill "Characters in Shot" using characters/roles explicitly mentioned in that action beat, including groups such as sentries, guards, soldiers, riders.
+- Always complete valid JSON.
+- Use short phrases in each field.
+- If a shot mentions someone being examined, approached, helped, seen, or discovered by guards/sentries, include both sides in "Characters in Shot".
+- For establishing shots, include main visible set/location in "Props / Set Dressing" if physical, e.g. fort wall, gates, courtyard.
+- Use consistent role names across shots
+- If Priority is blank, assign:
+  - High = injury, weapon, stunt, VFX/SFX, major entrance/reveal
+  - Medium = movement, guards, crowd, scene transition
+  - Low = simple establishing/background shot
+  - Always fill "Featured Extras / Groups" when groups exist (guards, soldiers, riders)
+- Fill "Continuity / Production Notes" when injury, blood, props or costume persists across shots
+- return valid JSON only.

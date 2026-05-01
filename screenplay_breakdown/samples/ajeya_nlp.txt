@@ -1,0 +1,39 @@
+Total scenes: 2
+
+========================================
+Scene 1
+========================================
+location: RAIGADH/SHIVAJI'S FORT - FORT WALL
+
+props:
+- golden sun
+- giant gates
+- arrow
+
+vehicles:
+
+animals:
+
+locations:
+- Maratha
+
+
+========================================
+Scene 2
+========================================
+location: RAIGADH/SHIVAJI'S FORT
+
+props:
+- a faint breath
+- a guard
+- coughs blood
+- resplendent silks
+
+vehicles:
+
+animals:
+
+locations:
+- Maratha
+
+
