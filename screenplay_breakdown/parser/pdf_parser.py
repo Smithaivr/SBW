@@ -4,7 +4,10 @@
 # Pass extracted text to text_parser.py for scene parsing
 
 import pdfplumber
-import re
+import re,os,sys
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 def extract_text_from_pdf(file_path: str) -> list[tuple[int, str]]:
     # Returns list of (page_number, text) tuples instead of single string
     # This preserves page numbers for scene assignment downstream

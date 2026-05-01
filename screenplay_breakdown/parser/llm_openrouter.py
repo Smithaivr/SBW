@@ -1,4 +1,4 @@
-import os
+import os,sys
 import json
 import time
 import requests
@@ -7,7 +7,12 @@ from jinja2 import Environment, FileSystemLoader
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 MODEL_NAME = "google/gemma-3-4b-it:free"
 
-env = Environment(loader=FileSystemLoader("templates"))
+env = Environment(
+    loader=FileSystemLoader(
+        os.path.join(os.path.dirname(__file__), "..", "templates")
+    )
+)
+
 template = env.get_template("scene_prompt.jinja")
 
 def build_llm_prompt(scene):

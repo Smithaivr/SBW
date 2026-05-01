@@ -7,22 +7,29 @@
 #   pass directly to text_parser.py
 #   return list of parsed scenes as JSON
 
-
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import FileResponse
 import shutil
 import os
 
-from services.pipeline_service import process_pdf_to_excel
+from screenplay_breakdown.services.pipeline_service import process_pdf_to_excel
 
 app = FastAPI()
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 @app.post("/process-script")
 async def process_script(file: UploadFile = File(...)):
+    print("API received file:", file.filename)
     pdf_path = os.path.join(UPLOAD_DIR, file.filename)
 
     # save uploaded file

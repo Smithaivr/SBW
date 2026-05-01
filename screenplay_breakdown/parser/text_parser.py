@@ -13,7 +13,10 @@
 from models.scene_schema import Scene, Dialogue
 #from parser.nlp_enricher import enrich_scene_with_nlp
 from typing import List
-import re   
+import re,os,sys
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 
 def clean_dialogue(dialogue):
     cleaned = []

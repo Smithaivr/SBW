@@ -1,15 +1,24 @@
 import pandas as pd
 import os
+import json
 
-def export_all(scenes):
-    output_path = "post_processing/output/ajeya_shot_breakdown.xlsx"
+def build_excel_from_scene_jsons(json_files, output_path):
+    all_rows = []
 
-    df = build_shot_df(scenes)
+    for json_file in json_files:
+        with open(json_file, "r", encoding="utf-8") as f:
+            scene_data = json.load(f)
+
+        all_rows.extend(scene_data["shot_rows"])
+
+    df = pd.DataFrame(all_rows)
+
     df_char = build_character_catalog(df)
     df_asset = build_asset_catalog(df)
     df_loc = build_location_catalog(df)
 
     write_excel(df, df_char, df_asset, df_loc, output_path)
+
     return output_path
 
 def build_shot_df(scenes):
