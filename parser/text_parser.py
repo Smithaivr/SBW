@@ -11,9 +11,69 @@
 # Return list of scene dicts matching the Scene model
 
 from models.scene_schema import Scene, Dialogue
-from parser.nlp_enricher import enrich_scene_with_nlp
+#from parser.nlp_enricher import enrich_scene_with_nlp
 from typing import List
 import re   
+
+def clean_dialogue(dialogue):
+    cleaned = []
+
+    INVALID_SPEAKERS = {
+        "ALTERNATE SCENE",
+        "FLASHBACK",
+        "CUT TO",
+        "FADE IN",
+        "FADE OUT",
+        "DISSOLVE TO",
+    }
+
+    for d in dialogue:
+        speaker = d.character.strip().upper()
+        text = d.text.strip()
+
+        if speaker in INVALID_SPEAKERS:
+            continue
+
+        # remove wrongly captured action paragraphs
+        if len(text.split()) > 60:
+            continue
+
+        cleaned.append(d)
+
+    return cleaned
+
+def merge_broken_action_lines(action_lines: list[str]) -> list[str]:
+    merged = []
+    buffer = ""
+
+    for line in action_lines:
+        line = line.strip()
+
+        if not line:
+            continue
+
+        # Keep markers as separate lines
+        if line.isupper() and len(line.split()) <= 4 and not line.endswith((".", "!", "?", "--", "...")):
+            if buffer:
+                merged.append(buffer.strip())
+                buffer = ""
+            merged.append(line)
+            continue
+
+        if not buffer:
+            buffer = line
+        else:
+            buffer += " " + line
+
+        # End sentence / beat when punctuation suggests completion
+        if line.endswith((".", "!", "?", "--", "...")):
+            merged.append(buffer.strip())
+            buffer = ""
+
+    if buffer:
+        merged.append(buffer.strip())
+
+    return merged
 
 def parse_text_script(pages: list[tuple[int, str]]) -> list[Scene]:
     scenes = []
@@ -22,9 +82,9 @@ def parse_text_script(pages: list[tuple[int, str]]) -> list[Scene]:
     EXCLUDED_CAPS = {
         "FADE IN", "FADE OUT", "CUT TO", "BACK TO", "MONTAGE",
         "SMASH CUT", "DISSOLVE TO", "TITLE CARD", "SUPER",
-        "INTERCUT", "END OF", "CONT'D",
+        "INTERCUT", "END OF", "CONT'D","ALTERNATE SCENE","FLASHBACK",
         "ARENA", "FORT GATES", "REAR WALL", "CLIFF",
-        "COURT ROOM", "OPEN AREA"
+        "COURT ROOM", "OPEN AREA","OPEN AREA/FRONT GATE"
     }
 
     scene_number = 1
@@ -35,10 +95,11 @@ def parse_text_script(pages: list[tuple[int, str]]) -> list[Scene]:
 
     for page_number, page_text in pages:
         current_page = page_number
-        for line in page_text.splitlines():
-            line = line.strip()
+        for raw_line in page_text.splitlines():
 
-            # Skip empty lines
+            indent = len(raw_line) - len(raw_line.lstrip())
+            line = raw_line.strip()
+
             if not line:
                 continue
 
@@ -51,6 +112,8 @@ def parse_text_script(pages: list[tuple[int, str]]) -> list[Scene]:
                         current_scene.dialogue.append(
                             Dialogue(character=current_character, text=" ".join(dialogue_buffer))
                         )
+                    current_scene.dialogue = clean_dialogue(current_scene.dialogue)
+                    current_scene.action_lines = merge_broken_action_lines(current_scene.action_lines)
                     scenes.append(current_scene)
                 
                 location_type_raw, rest = scene_heading_match.groups()
@@ -89,11 +152,30 @@ def parse_text_script(pages: list[tuple[int, str]]) -> list[Scene]:
             if not current_scene:
                 continue
 
+            # Handle transitions / sub-location markers
+            marker = line.replace(":", "").strip().upper()
+
+            if marker in EXCLUDED_CAPS:
+                if dialogue_buffer and current_character:
+                    current_scene.dialogue.append(
+                        Dialogue(character=current_character, text=" ".join(dialogue_buffer))
+                    )
+
+                current_character = None
+                dialogue_buffer = []
+
+                # keep useful sub-location markers as action lines
+                if marker in {"ARENA", "FORT GATES", "REAR WALL", "CLIFF", "COURT ROOM", "OPEN AREA", "OPEN AREA/FRONT GATE"}:
+                    current_scene.action_lines.append(line)
+
+                continue
+
             current_scene.raw_text += line + "\n"
             
             # Character cue (allow (V.O.), (O.S.), (cont'd))
             is_character_cue = (
-                re.match(r"^[A-Z][A-Z\s'\(\)\.]+$", line)
+                indent >= 30
+                and re.match(r"^[A-Z][A-Z\s'\(\)\.]+$", line)
                 and not line.endswith(".")
                 and len(line.split()) <= 4
             )
@@ -118,7 +200,7 @@ def parse_text_script(pages: list[tuple[int, str]]) -> list[Scene]:
                 continue
     
             # Dialogue lines
-            if current_character:
+            if current_character and indent >= 20:
                 if re.match(r'^\(.*\)$', line):
                     continue
                 dialogue_buffer.append(line)
@@ -132,6 +214,8 @@ def parse_text_script(pages: list[tuple[int, str]]) -> list[Scene]:
             current_scene.dialogue.append(
                 Dialogue(character=current_character, text=" ".join(dialogue_buffer)
             ))
+        current_scene.dialogue = clean_dialogue(current_scene.dialogue)
+        current_scene.action_lines = merge_broken_action_lines(current_scene.action_lines)
         current_scene.page_end = current_page
         scenes.append(current_scene)
     
@@ -151,7 +235,7 @@ if __name__ == "__main__":
 
     pages = [(1, script_text)]
     scenes = parse_text_script(pages)
-    scenes = [enrich_scene_with_nlp(scene) for scene in scenes]
+    #scenes = [enrich_scene_with_nlp(scene) for scene in scenes]
 
     output_path = "samples/ajeya_parsed.txt"
 
@@ -180,22 +264,6 @@ if __name__ == "__main__":
             f.write("\naction_lines:\n")
             for a in scene.action_lines:
                 f.write(f"- {a}\n")
-
-            f.write("\nprops_candidates:\n")
-            for p in scene.props_candidates or []:
-                f.write(f"- {p}\n")
-
-            f.write("\nvehicles_candidates:\n")
-            for v in scene.vehicles_candidates or []:
-                f.write(f"- {v}\n")
-
-            f.write("\nanimals_candidates:\n")
-            for a in scene.animals_candidates or []:
-                f.write(f"- {a}\n")
-
-            f.write("\nlocations_candidates:\n")
-            for l in scene.locations_candidates or []:
-                f.write(f"- {l}\n")
 
             f.write("\n\n")
 

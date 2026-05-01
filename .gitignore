@@ -1,0 +1,6 @@
+.env
+__pycache__/
+*.pyc
+uploads/
+post_processing/output/
+*.xlsx
