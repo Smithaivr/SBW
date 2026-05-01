@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+pdfplumber
+pandas
+openpyxl
+jinja2
+requests
+python-multipart
+python-dotenv
